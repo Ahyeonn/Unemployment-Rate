@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Unemployment Rate</title>
+</head>
+<body>
+    <div style="display: flex; flex-direction: column;">
+        <h1 style="text-align:center; font-weight: lighter;">US Unemployment Rate</h1>
+        <svg id="svg" width="1000" height="600"></svg>
+    </div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        function getDataForRate(data) {
+            const arr = data
+            .filter(d=> !isNaN(d.UNRATE))
+                .map(d => {
+                    d.UNRATE = parseFloat(d.UNRATE)
+                    return d
+                })
+            return arr
+        }
+        function handleData(data) {
+            getDataForRate(data)
+            const width = 1000
+            const height = 600
+            const margin = 40
+            const urData = getDataForRate(data)
+            const parseTime = d3.timeParse("%Y-%m-%d")
+            const dateExtent = d3.extent(urData, d=> d.DATE = parseTime(d.DATE))
+            const xscale = d3.scaleTime()
+                .domain(dateExtent)
+                .range([margin, width - margin])
+                .nice()
+            const unemploymentExtents = d3.extent(urData, d=> d.UNRATE)
+            const yscale = d3.scaleLinear()
+                .domain(unemploymentExtents)
+                .range([height - margin, margin])
+            const linegen = d3.line()
+                .x(d => xscale(d.DATE))
+                .y(d => yscale(d.UNRATE))
+                .curve(d3.curveLinear)
+            const svg = d3
+                .select('#svg')
+            const graph = svg
+                .append('g')
+            graph
+                .append('path')
+                .attr('d', linegen(urData))
+                .attr('stroke-width', 1)
+                .attr('stroke', 'cornflowerblue')
+                .attr('fill', 'none')
+            const bottomAxis = d3.axisBottom(xscale)
+            const leftAxis = d3.axisLeft(yscale)
+            svg
+                .append('g')
+                .attr('transform', `translate(0, ${height - margin})`)
+                .call(bottomAxis)
+            svg
+                .append('g')
+                .attr('transform', `translate(${margin}, 0)`)
+                .call(leftAxis)
+            const colorScale = d3.scaleSequential() 
+                .domain(dateExtent)
+                .interpolator(d3.interpolateRainbow)
+            svg
+                .append('g')
+                .selectAll('circle')
+                .data(urData)
+                .enter()
+                .append('circle')
+                .attr('cx', d => xscale(d.DATE))
+                .attr('cy', d => yscale(d.UNRATE))
+                .attr('r', 2)
+                .attr('fill', d => colorScale(d.DATE))    
+        }
+        d3.csv('unemployment_rate.csv')
+        .then(handleData)
+    </script>
+    <style>
+        body, html {
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #svg {
+            border: 1px solid;
+        }
+    </style>
+</body>
+</html>
